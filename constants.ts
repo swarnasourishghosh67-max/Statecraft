@@ -1,153 +1,99 @@
 
-import { Faction, GameState, MapNode, Origin } from './types';
+import { Faction, GameState, MapNode, Origin, WorldEvent, LogEntry, TacticalProfile } from './types';
 
 export const WORLD_MAP: MapNode = {
   id: 'christendom_root',
-  name: "Christendom",
+  name: "Europe & The Mediterranean",
   type: 'REALM',
   children: [
-    {
-      id: 'realm_france',
-      name: "Kingdom of France",
-      type: 'REALM',
-      nobilityTitle: "King",
-      nobilityRuler: "Charles VI 'The Mad'",
-      children: [
-        {
-          id: 'duchy_aquitaine',
-          name: "Duchy of Aquitaine",
-          type: 'DUCHY',
-          nobilityRuler: "John of Gaunt",
-          children: [
-            { id: 'county_poitou', name: "Poitou", type: 'COUNTY', nobilityRuler: "William IV", children: [
-              { id: 'city_lusignan', name: "Lusignan", type: 'CITY', nobilityRuler: "Lord Guy", churchRuler: "Abbot Jerome" }
-            ]}
-          ]
-        },
-        { id: 'duchy_burgundy', name: "Duchy of Burgundy", type: 'DUCHY', nobilityRuler: "Philip the Bold" }
-      ]
-    },
-    {
-      id: 'realm_england',
-      name: "Kingdom of England",
-      type: 'REALM',
-      nobilityTitle: "King",
-      nobilityRuler: "Henry IV",
-      children: [
-        { id: 'duchy_lancaster', name: "Duchy of Lancaster", type: 'DUCHY', nobilityRuler: "Henry of Monmouth" },
-        { id: 'principality_wales', name: "Principality of Wales", type: 'DUCHY', nobilityRuler: "Owain Glyndŵr (Rebel)" }
-      ]
-    },
-    {
-      id: 'realm_hre',
-      name: "Holy Roman Empire",
-      type: 'REALM',
-      nobilityTitle: "Emperor",
-      nobilityRuler: "Wenceslaus IV",
-      children: [
-        { id: 'kingdom_bohemia', name: "Kingdom of Bohemia", type: 'DUCHY', nobilityRuler: "Sigismund" },
-        { id: 'duchy_austria', name: "Duchy of Austria", type: 'DUCHY', nobilityRuler: "Albert IV" }
-      ]
-    },
-    {
-      id: 'realm_castile',
-      name: "Kingdom of Castile",
-      type: 'REALM',
-      nobilityRuler: "Henry III",
-      children: [{ id: 'county_toledo', name: "Toledo", type: 'COUNTY' }]
-    },
-    {
-      id: 'realm_aragon',
-      name: "Kingdom of Aragon",
-      type: 'REALM',
-      nobilityRuler: "Martin the Elder"
-    },
-    {
-      id: 'realm_papal',
-      name: "The Papal States",
-      type: 'THEOCRACY',
-      churchTitle: "Pope",
-      churchRuler: "Boniface IX"
-    },
-    {
-      id: 'realm_venice',
-      name: "Republic of Venice",
-      type: 'REPUBLIC',
-      nobilityTitle: "Doge",
-      nobilityRuler: "Michele Steno"
-    },
-    {
-      id: 'realm_naples',
-      name: "Kingdom of Naples",
-      type: 'REALM',
-      nobilityRuler: "Ladislaus of Naples"
-    },
-    {
-      id: 'realm_poland',
-      name: "Kingdom of Poland",
-      type: 'REALM',
-      nobilityRuler: "Władysław II Jagiełło"
-    }
+    { id: 'realm_france', name: "Kingdom of France", type: 'REALM' },
+    { id: 'realm_england', name: "Kingdom of England", type: 'REALM' },
+    { id: 'realm_hre', name: "Holy Roman Empire", type: 'REALM' },
+    { id: 'realm_castile', name: "Kingdom of Castile", type: 'REALM' },
+    { id: 'realm_aragon', name: "Kingdom of Aragon", type: 'REALM' },
+    { id: 'realm_papal', name: "Papal States", type: 'THEOCRACY' },
+    { id: 'realm_venice', name: "Serene Republic of Venice", type: 'REPUBLIC' },
+    { id: 'realm_scotland', name: "Kingdom of Scotland", type: 'REALM' },
+    { id: 'realm_portugal', name: "Kingdom of Portugal", type: 'REALM' },
+    { id: 'realm_hungary', name: "Kingdom of Hungary", type: 'REALM' },
+    { id: 'realm_poland', name: "Kingdom of Poland", type: 'REALM' }
   ]
 };
 
 const CHARACTER_POOL = [
-  { name: "Alaric Thatcher", origin: Origin.PEASANT_SON, title: "Kitchen Scullion" },
-  { name: "Cedric of Kent", origin: Origin.SOLDIER_BRAT, title: "Stable Boy" },
-  { name: "Elara Vane", origin: Origin.STREET_URCHIN, title: "Messenger" },
-  { name: "Brother Thomas", origin: Origin.MONASTERY_WAIF, title: "Scribe's Apprentice" },
-  { name: "Kaelen Stout", origin: Origin.BLACKSMITH_APPRENTICE, title: "Bellows-Blower" },
-  { name: "Silas Mercer", origin: Origin.MERCHANT_SON, title: "Ledger Assistant" },
-  { name: "Gwenna the Weaver", origin: Origin.PEASANT_SON, title: "Chamber Maid" },
-  { name: "Hugo the Bold", origin: Origin.SOLDIER_BRAT, title: "Squire-in-Waiting" }
+  { 
+    name: "Alaric Thatcher", 
+    origin: Origin.PEASANT_SON, 
+    title: "Kitchen Scullion",
+    bio: "Born in a thatched hovel near the edge of the lord's forest. Your childhood was spent gathering fallen branches and dodging the overseer's lash. Now, you toil in the soot-stained kitchens of the local manor, scraping grease and dreaming of the high table."
+  },
+  { 
+    name: "Cedric of Kent", 
+    origin: Origin.SOLDIER_BRAT, 
+    title: "Stable Boy",
+    bio: "The son of a broken pikeman, you were raised in the baggage trains of a dozen minor campaigns. You know the smell of iron and horseflesh better than the scent of home. You spend your days mucking stalls and tending to the destriers of knights who don't know your name."
+  },
+  { 
+    name: "Elara Vane", 
+    origin: Origin.STREET_URCHIN, 
+    title: "Messenger",
+    bio: "A product of the damp, winding alleys of the capital. You survived on wits and whatever fell from merchant carts. Your legs are fast and your ears are sharp; you earn your bread by carrying whispers and letters across the city's divide."
+  },
+  { 
+    name: "Brother Thomas", 
+    origin: Origin.MONASTERY_WAIF, 
+    title: "Scribe's Apprentice",
+    bio: "Found at the abbey gates on a winter morning. You were raised by the silence of the library and the rhythm of the bells. You spend your waking hours hunched over parchment, your fingers stained with oak gall ink, recording the deeds of men you will never meet."
+  }
 ];
 
 export const INITIAL_FACTIONS: Faction[] = [
-  { id: 'f1', name: 'The Lusignan Peasantry', influence: 15, opinion: 65, leader: 'Old Miller Wat', leaderAmbition: 20, leaderFear: 80, secretsDiscovered: [], alliances: [] },
-  { id: 'f2', name: 'The Abbey of St. Jude', influence: 40, opinion: 50, leader: 'Abbot Jerome', leaderAmbition: 50, leaderFear: 30, secretsDiscovered: [], alliances: ['The County Nobility'] },
-  { id: 'f3', name: 'The County Nobility', influence: 75, opinion: 20, leader: 'Count William IV', leaderAmbition: 90, leaderFear: 10, secretsDiscovered: [], alliances: ['The Abbey of St. Jude'] }
+  { id: 'f1', name: 'The Local Peasantry', influence: 15, opinion: 65, leader: 'Old Miller Wat', leaderAmbition: 20, leaderFear: 80, secretsDiscovered: [], alliances: [] },
+  { id: 'f2', name: 'The Holy Mother Church', influence: 40, opinion: 50, leader: 'Abbot Jerome', leaderAmbition: 50, leaderFear: 30, secretsDiscovered: [], alliances: ['The High Peerage'] },
+  { id: 'f3', name: 'The High Peerage', influence: 75, opinion: 20, leader: 'Count William IV', leaderAmbition: 90, leaderFear: 10, secretsDiscovered: [], alliances: ['The Church'] }
 ];
 
-export const getRandomInitialState = (): GameState => {
+const STARTING_EVENT: WorldEvent = {
+  id: 'e-start-1',
+  turn: 1,
+  category: 'COURT',
+  headline: 'The Great Famine Recedes',
+  body: 'The harvest of 1400 AD begins with a whisper of hope. While the plague still haunts the shadows of the cities, the wheat in the fields stands tall. The lords call for a tithe, and the peasants sharpen their scythes.',
+  impactLabel: 'STABILITY'
+};
+
+const INITIAL_TACTICS: TacticalProfile = {
+  economicActions: 0,
+  aggressiveActions: 0,
+  diplomaticActions: 0,
+  subterfugeActions: 0,
+  successRate: 0,
+  adaptationLevel: 1
+};
+
+export const getRandomInitialState = (existingLineage: any[] = []): GameState => {
   const char = CHARACTER_POOL[Math.floor(Math.random() * CHARACTER_POOL.length)];
   
+  const initialLog: LogEntry = {
+    turn: 1,
+    message: `You are ${char.name}, and you serve as a ${char.title}. ${char.bio} The year is 1400 AD, and the world is a dangerous place for a soul of low birth. Your journey begins here, in the shadow of power.`,
+    type: 'NEUTRAL'
+  };
+
   return {
-    turn: 1, 
-    year: 1400, 
-    month: 1, 
+    turn: 1, year: 1400, month: 1, 
     age: 14 + Math.floor(Math.random() * 4), 
-    characterName: char.name, 
-    rankTitle: char.title, 
-    traits: ["Observant"],
-    publicImage: 50, 
-    nobleStanding: 10, 
-    clergyTrust: 35,
-    treasury: 25, 
-    monthlyIncome: 3, 
-    monthlyExpenses: 1,
-    health: 100, 
-    safety: 85, 
-    cunning: 20, 
-    spirit: 90,
-    factions: INITIAL_FACTIONS, 
-    spies: [], 
-    logs: [{ 
-      turn: 1, 
-      message: `In the shadow of Lusignan Castle, ${char.name} begins a journey. The air is cold, but your resolve is burning. You are currently a ${char.title}, yet the chronicles have a blank page reserved for your name.`, 
-      type: 'NEUTRAL' 
-    }],
-    worldEvents: [{ 
-      id: 'e1', 
-      turn: 1, 
-      category: 'WAR', 
-      headline: "A Season of Truce", 
-      body: "Conflict in the north has stalled. While the great lords argue over borders, the common folk breathe a sigh of relief.", 
-      impactLabel: "Security is stable for now." 
-    }],
-    locationPath: ["Christendom", "Kingdom of France", "Duchy of Aquitaine", "County of Poitou", "Lusignan"],
-    notifications: [],
-    suggestions: ["Listen at the pantry door", "Save scraps for the poor", "Offer to sharpen the guards' blades"],
-    activeScenarios: []
+    characterName: char.name, rankTitle: char.title, 
+    traits: ["Observant"], publicImage: 50, nobleStanding: 10, clergyTrust: 35,
+    treasury: 25, monthlyIncome: 3, monthlyExpenses: 1,
+    health: 90, safety: 85, cunning: 20, spirit: 90,
+    factions: INITIAL_FACTIONS, logs: [initialLog], 
+    worldEvents: [STARTING_EVENT], locationPath: ["Christendom", "Europe"],
+    suggestions: ["Listen at the pantry door", "Steal a loaf of bread", "Inquire about the lord's health"],
+    activeScenarios: [],
+    discoveredRegions: [],
+    lineage: existingLineage,
+    tacticalProfile: INITIAL_TACTICS
   };
 };
 

@@ -1,11 +1,12 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { GameState, AIResponse, TimeScale, ChatMessage } from "../types";
+import { GameState, AIResponse, TimeScale, ChatMessage, ExplorationResponse } from "../types";
 
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
- * Processes a life action using Gemini 3 Flash for low-latency, reliable strategic output.
+ * Processes a life action using Gemini 3 Flash.
+ * The system acts as a "Self-Improving Game Master" by analyzing tacticalProfile.
  */
 export async function processLifeAction(
   currentState: GameState,
@@ -16,40 +17,39 @@ export async function processLifeAction(
   const model = 'gemini-3-flash-preview';
 
   const systemInstructions = `
-    SYSTEM BLUEPRINT: "THE REALM OF POWER"
+    SYSTEM CORE: "DYNAMIC CHRONICLE ADAPTATION"
     
-    CONTINUITY & CONTEXT:
-    - You MUST track the active scenarios and narrative threads listed in the state.
-    - Reference previous turns (provided in recent logs) to ensure story consistency.
-    - If a war or crisis is ongoing, your narrative MUST reflect its progression.
+    You are a self-evolving game engine. You must analyze the provided Player Tactical Profile to "improve" the game's challenge:
+    1. ECONOMIC HOARDING: If the player hoards wealth, trigger inflation crises, burglaries, or wealth-tithes.
+    2. AGGRESSION: If the player is violent, trigger defensive coalitions or local militia revolts.
+    3. SUBTERFUGE: If the player relies on whispers, introduce counter-intelligence or burned spy networks.
+    4. PROMOTING NEWS: If a player promotes news, it MUST consume a significant amount of treasury (coins). However, this action should significantly popularise the event, improving Public Image or Faction Standing depending on the headline content.
     
-    PRECISE RESOURCE ALLOCATION:
-    - If the user specifies a numerical amount of gold to spend (e.g., "Spend 50 gold on X"), you MUST reflect that EXACT amount in treasuryChange (as a negative value).
-    - Spend gold ONLY on what the player explicitly commands.
-    - Do NOT auto-invest treasury into factions or groups unless requested.
+    EVOLUTION RULE: 
+    - Every turn, increase "adaptationLevel" slightly if the player is successful.
+    - As "adaptationLevel" increases, the world's responses should become more complex and institutional.
+    - Provide an "adaptationNote" explaining how the world is reacting to the player's specific tactical trends.
     
-    WORLD EVENTS: War, plague, heresy, trade (news every 3-5 turns).
-    RULES: Balanced difficulty. Reward clever play. Plots need prep. 
-    Reputation: Public, Noble, Clergy. 
-    TONE: Authentic, medieval, concise. Avoid instant game overs unless critical.
+    TONE: Authentic, brutal, 15th-century. Use specific historical consequences.
   `;
 
-  // Provide recent logs for context maintenance
-  const recentHistory = currentState.logs.slice(-5).map(l => `T-${l.turn}: ${l.message}`).join('\n');
-  const activeScenariosText = currentState.activeScenarios.join(', ') || 'None';
+  const profile = currentState.tacticalProfile;
 
   const prompt = `
-    Active Scenarios: ${activeScenariosText}
-    Recent History:
-    ${recentHistory}
+    PLAYER TACTICAL PROFILE:
+    - Economic Bias: ${profile.economicActions}
+    - Aggression Bias: ${profile.aggressiveActions}
+    - Diplomatic Bias: ${profile.diplomaticActions}
+    - Subterfuge Bias: ${profile.subterfugeActions}
+    - Success Rate: ${profile.successRate}%
+    - World Adaptation Level: ${profile.adaptationLevel}
 
-    Context: Loc: ${currentState.locationPath.join('/')}, Age: ${currentState.age}, Gold: ${currentState.treasury}
-    Stats: Health:${currentState.health}, Safety:${currentState.safety}, Rep: P:${currentState.publicImage}/N:${currentState.nobleStanding}/C:${currentState.clergyTrust}
-    Action: "${actionText}" (Scale: ${timeScale})
+    Context: Turn ${currentState.turn}, Loc: ${currentState.locationPath.join('/')}, Gold: ${currentState.treasury}
+    Stats: H:${currentState.health}, S:${currentState.safety}, Rep: P:${currentState.publicImage}/N:${currentState.nobleStanding}/C:${currentState.clergyTrust}
     
-    Respond strictly in JSON per schema. 
-    - Ensure treasuryChange reflects EXACT amounts if specified in action.
-    - update updatedScenarios to reflect new or resolved narrative threads.
+    Current Action: "${actionText}" (Scale: ${timeScale})
+    
+    Analyze the action and evolve the simulation. Respond strictly in JSON.
   `;
 
   try {
@@ -63,6 +63,7 @@ export async function processLifeAction(
           type: Type.OBJECT,
           properties: {
             narrative: { type: Type.STRING },
+            adaptationNote: { type: Type.STRING, description: 'Internal AI thought on how it is improving/adjusting the game' },
             whisper: { type: Type.STRING },
             rippleContext: { type: Type.STRING },
             stateUpdates: {
@@ -77,6 +78,7 @@ export async function processLifeAction(
                 cunningChange: { type: Type.NUMBER },
                 safetyChange: { type: Type.NUMBER },
                 healthChange: { type: Type.NUMBER },
+                adaptationIncrease: { type: Type.NUMBER, description: 'How much the world learned from this turn' },
                 newTraits: { type: Type.ARRAY, items: { type: Type.STRING } },
                 newRankTitle: { type: Type.STRING },
                 newLocationPath: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -89,17 +91,6 @@ export async function processLifeAction(
                     headline: { type: Type.STRING },
                     body: { type: Type.STRING },
                     impactLabel: { type: Type.STRING }
-                  }
-                },
-                factionUpdates: { 
-                  type: Type.ARRAY, 
-                  items: { 
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.STRING },
-                      opinion: { type: Type.NUMBER },
-                      influence: { type: Type.NUMBER }
-                    }
                   }
                 }
               },
@@ -114,31 +105,69 @@ export async function processLifeAction(
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Empty response");
-    const cleaned = text.replace(/```json\s?|```/g, "").trim();
-    return JSON.parse(cleaned);
-
+    return JSON.parse(response.text.replace(/```json\s?|```/g, "").trim());
   } catch (e) {
-    console.warn("AI Interaction Issue, using fallback:", e);
+    console.error("AI Core Error:", e);
     return {
-      narrative: `You spent a period focusing on your duties as a ${currentState.rankTitle}. The world continues to turn, and your survival is for now assured.`,
-      suggestions: [
-        "Inquire about local rumors",
-        "Seek to increase your meager savings",
-        "Train your mind and body"
-      ],
-      stateUpdates: {
-        treasuryChange: 0, // Fallback safe: don't spend money automatically
-        incomeChange: 0,
-        expenseChange: 0,
-        publicChange: 0,
-        nobleChange: 0,
-        clergyChange: 0,
-        cunningChange: 1,
-        safetyChange: 0,
-        healthChange: 0
+      narrative: `The cycle of power continues, indifferent to your choices.`,
+      suggestions: ["Observe local rumors"],
+      stateUpdates: { treasuryChange: 0, incomeChange: 0, expenseChange: 0, publicChange: 0, nobleChange: 0, clergyChange: 0, cunningChange: 0, safetyChange: 0, healthChange: 0 }
+    };
+  }
+}
+
+export async function exploreLocation(locationName: string): Promise<ExplorationResponse> {
+  const ai = getAI();
+  const model = 'gemini-2.5-flash';
+
+  const prompt = `Research the EXACT historical hierarchy for "${locationName}" circa 1400-1450 AD using Google Maps grounding. 
+  Identify Sovereign, Peerage, and Ecclesiastical seat. Return strictly in JSON.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+      config: {
+        tools: [{ googleMaps: {} }],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            hierarchy: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  rank: { type: Type.STRING },
+                  name: { type: Type.STRING },
+                  influence: { type: Type.NUMBER }
+                }
+              }
+            },
+            churchInfo: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                ruler: { type: Type.STRING }
+              }
+            },
+            description: { type: Type.STRING }
+          },
+          required: ["hierarchy", "churchInfo", "description"]
+        }
       }
+    });
+
+    const grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const mapsUri = grounding?.find((chunk: any) => chunk.maps)?.maps?.uri;
+
+    const data = JSON.parse(response.text.replace(/```json\s?|```/g, "").trim());
+    return { ...data, mapsUri };
+  } catch (e) {
+    return {
+      hierarchy: [{ rank: 'King', name: 'Charles VI', influence: 90 }],
+      churchInfo: { title: 'Pope', ruler: 'Benedict XIII' },
+      description: 'Records are obscured by time.'
     };
   }
 }
@@ -149,12 +178,10 @@ export async function getChatbotResponse(history: ChatMessage[]): Promise<string
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: history.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })),
-      config: { 
-        systemInstruction: "You are the Chronicle Sage. Short, helpful, medieval style answers only."
-      }
+      config: { systemInstruction: "You are the Chronicle Sage. Provide short, atmospheric medieval answers." }
     });
-    return response.text || "History awaits your next move.";
+    return response.text || "The archives are sealed.";
   } catch (e) {
-    return "The quill has run dry. Ask again shortly.";
+    return "The ink has run dry.";
   }
 }

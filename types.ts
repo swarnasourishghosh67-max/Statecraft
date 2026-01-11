@@ -10,15 +10,18 @@ export enum Origin {
 
 export type TimeScale = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | '5_YEARS';
 
+export interface TacticalProfile {
+  economicActions: number;
+  aggressiveActions: number;
+  diplomaticActions: number;
+  subterfugeActions: number;
+  successRate: number;
+  adaptationLevel: number; // 0-100, increases as game learns player patterns
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
-}
-
-export interface POI {
-  type: 'THREAT' | 'WEALTH' | 'INTEL' | 'GENERAL';
-  name: string;
-  description: string;
 }
 
 export interface WorldEvent {
@@ -30,6 +33,12 @@ export interface WorldEvent {
   impactLabel: string;
 }
 
+export interface FeudalMember {
+  rank: string;
+  name: string;
+  influence: number;
+}
+
 export interface MapNode {
   id: string;
   name: string;
@@ -38,6 +47,8 @@ export interface MapNode {
   nobilityRuler?: string;
   churchTitle?: string;
   churchRuler?: string;
+  hierarchy?: FeudalMember[];
+  groundingUri?: string;
   children?: MapNode[];
 }
 
@@ -53,18 +64,29 @@ export interface Faction {
   alliances: string[];
 }
 
-export interface SpyNetwork {
-  location: string;
-  efficiency: number;
-  isBurned: boolean;
-}
-
 export interface LogEntry {
   turn: number;
   message: string;
   whisper?: string;
   rippleEffect?: string;
-  type: 'NEUTRAL' | 'VIOLENT' | 'SUCCESS' | 'SETBACK' | 'HARDSHIP' | 'LEVEL_UP' | 'WHISPER';
+  type: 'NEUTRAL' | 'VIOLENT' | 'SUCCESS' | 'SETBACK' | 'HARDSHIP' | 'LEVEL_UP' | 'WHISPER' | 'ADAPTATION';
+}
+
+export interface LegacyCharacter {
+  name: string;
+  rank: string;
+  ageAtDeath: number;
+  causeOfDeath: string;
+  turnDied: number;
+}
+
+// Added missing Notification interface
+export interface Notification {
+  id: string;
+  type: 'THREAT' | 'OPPORTUNITY' | 'EVENT';
+  title: string;
+  message: string;
+  actionRequired?: boolean;
 }
 
 export interface GameState {
@@ -86,19 +108,21 @@ export interface GameState {
   cunning: number;
   spirit: number;
   factions: Faction[];
-  spies: SpyNetwork[];
   logs: LogEntry[];
   worldEvents: WorldEvent[]; 
   locationPath: string[];
-  notifications: Notification[];
   suggestions: string[];
-  activeScenarios: string[]; // Track ongoing story threads for continuity
+  activeScenarios: string[];
+  discoveredRegions: MapNode[];
+  lineage: LegacyCharacter[];
+  tacticalProfile: TacticalProfile; // Tracked AI/ML metadata
 }
 
 export interface AIResponse {
   narrative: string;
   whisper?: string;
   rippleContext?: string;
+  adaptationNote?: string; // AI explains how it's adjusting the game
   stateUpdates: {
     treasuryChange: number;
     incomeChange: number;
@@ -114,18 +138,17 @@ export interface AIResponse {
     newLocationPath?: string[];
     factionUpdates?: Partial<Faction>[];
     newWorldEvent?: WorldEvent; 
-    updatedScenarios?: string[]; // AI manages active story threads
+    updatedScenarios?: string[];
+    adaptationIncrease?: number;
   };
   suggestions: string[];
   gameOver?: boolean;
   gameOverReason?: string;
 }
 
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'THREAT' | 'PLOT' | 'INFO' | 'RIPPLE';
-  isRead: boolean;
-  actionRequired?: boolean;
+export interface ExplorationResponse {
+  hierarchy: FeudalMember[];
+  churchInfo: { title: string; ruler: string };
+  description: string;
+  mapsUri?: string;
 }
