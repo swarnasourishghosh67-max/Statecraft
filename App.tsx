@@ -89,7 +89,6 @@ const App: React.FC = () => {
     return updated;
   };
 
-  // Fixed: Implemented handleLegacyChoice to manage game restarts or character transitions
   const handleLegacyChoice = (choice: 'RESTART' | 'HEIR' | 'PREVIOUS', previousChar?: LegacyCharacter) => {
     if (choice === 'RESTART') {
       localStorage.removeItem(SAVE_KEY);
@@ -101,6 +100,7 @@ const App: React.FC = () => {
         return {
           ...newState,
           characterName: `${prev.characterName} II`,
+          year: prev.year,
           treasury: Math.max(50, Math.floor(prev.treasury * 0.5)),
           nobleStanding: Math.max(20, Math.floor(prev.nobleStanding * 0.7)),
           clergyTrust: Math.max(20, Math.floor(prev.clergyTrust * 0.7)),
@@ -109,7 +109,6 @@ const App: React.FC = () => {
       });
       setGameOver({ isOver: false });
     } else {
-      // Logic for PREVIOUS or fallback
       startNewGame();
     }
   };
@@ -151,7 +150,7 @@ const App: React.FC = () => {
         const nextHealth = Math.max(0, Math.min(100, prev.health + (updates.healthChange || 0)));
         const nextSafety = Math.max(0, Math.min(100, prev.safety + (updates.safetyChange || 0)));
 
-        if (nextHealth <= 0 || nextSafety <= 0 || finalTreasury < -1000 || result.gameOver || newAge > 90) {
+        if (nextHealth <= 0 || nextSafety <= 0 || finalTreasury < -1000 || result.gameOver || newAge > 100) {
           const reason = result.gameOverReason || "The cycle of life reaches its conclusion.";
           const legacyChar: LegacyCharacter = {
             name: prev.characterName,
@@ -164,11 +163,9 @@ const App: React.FC = () => {
           return { ...prev, health: 0, lineage: [...prev.lineage, legacyChar] };
         }
 
-        // Update ML-based Tactical Profile
         let updatedProfile = analyzeTactics(directive, prev.tacticalProfile);
         updatedProfile.adaptationLevel = Math.min(100, updatedProfile.adaptationLevel + (updates.adaptationIncrease || 0.5));
         
-        // Success rate calculation (simplified: positive safety/health changes increase it)
         const isSuccess = (updates.healthChange >= 0 && updates.safetyChange >= 0 && updates.treasuryChange >= 0);
         updatedProfile.successRate = Math.floor((updatedProfile.successRate * prev.turn + (isSuccess ? 100 : 0)) / (prev.turn + 1));
 
@@ -246,6 +243,8 @@ const App: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <span className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-purple-400">Turn {gameState.turn}</span>
               <div className="h-1 w-1 rounded-full bg-purple-900" />
+              <span className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-amber-500">{gameState.year} AD</span>
+              <div className="h-1 w-1 rounded-full bg-amber-900" />
               <span className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-emerald-500">Age {gameState.age}</span>
             </div>
           </div>
@@ -259,7 +258,7 @@ const App: React.FC = () => {
           {isLoading && (
             <div className="mt-8 flex items-center gap-4 text-purple-500 animate-pulse bg-purple-500/5 p-4 rounded-2xl border border-purple-500/20">
               <div className="w-2 h-2 rounded-full bg-current" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Consulting the Oracle...</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Chronicle Synth in Progress...</span>
             </div>
           )}
           {error && (
@@ -297,6 +296,7 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden rounded-3xl">
             <MapView 
               currentLocationPath={gameState.locationPath} 
+              currentYear={gameState.year}
               discoveredRegions={gameState.discoveredRegions}
               onRegionDiscovered={handleRegionDiscovered}
               onTravel={(path) => { handleAction(`I travel to ${path[path.length-1]}`, 'WEEK', path); setShowMap(false); }} 

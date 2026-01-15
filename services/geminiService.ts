@@ -6,7 +6,6 @@ const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * Processes a life action using Gemini 3 Flash.
- * The system acts as a "Self-Improving Game Master" by analyzing tacticalProfile.
  */
 export async function processLifeAction(
   currentState: GameState,
@@ -17,39 +16,37 @@ export async function processLifeAction(
   const model = 'gemini-3-flash-preview';
 
   const systemInstructions = `
-    SYSTEM CORE: "DYNAMIC CHRONICLE ADAPTATION"
+    SYSTEM CORE: "HISTORICAL CHRONICLE ENGINE"
     
-    You are a self-evolving game engine. You must analyze the provided Player Tactical Profile to "improve" the game's challenge:
-    1. ECONOMIC HOARDING: If the player hoards wealth, trigger inflation crises, burglaries, or wealth-tithes.
-    2. AGGRESSION: If the player is violent, trigger defensive coalitions or local militia revolts.
-    3. SUBTERFUGE: If the player relies on whispers, introduce counter-intelligence or burned spy networks.
-    4. PROMOTING NEWS: If a player promotes news, it MUST consume a significant amount of treasury (coins). However, this action should significantly popularise the event, improving Public Image or Faction Standing depending on the headline content.
+    You are a high-fidelity historical simulator. You must ground your narrative in the current year: ${currentState.year} AD.
     
-    EVOLUTION RULE: 
-    - Every turn, increase "adaptationLevel" slightly if the player is successful.
-    - As "adaptationLevel" increases, the world's responses should become more complex and institutional.
-    - Provide an "adaptationNote" explaining how the world is reacting to the player's specific tactical trends.
+    ERA CONTEXT:
+    1. 1400-1550 (FEUDAL): Heavy focus on knights, castles, the Church's iron grip, and local lords.
+    2. 1550-1750 (IMPERIAL): Rise of gunpowder, colonization, absolute monarchs, and scientific curiosity.
+    3. 1750-1850 (REVOLUTIONARY): The Enlightenment, Napoleonic influence, republics vs monarchs, and the birth of modern ideology.
+    4. 1850-1950 (INDUSTRIAL/MODERN): Steam, rail, factories, labor unions, world wars, and the decay of old royalty.
+
+    DYNAMIC ADAPTATION:
+    - ECONOMIC: If year > 1850, use factory strikes or stock market crashes instead of "tithes".
+    - PROMOTING NEWS: Costs treasury. Spreads influence. In 1400, this is "Heralds and Criers". In 1890, it is "Newspaper Propaganda".
+    - WORLD EVENTS: Interleave real historical trends (e.g., if year is ~1415, mention Agincourt; if ~1789, mention the Bastille; if ~1914, mention the Great War).
     
-    TONE: Authentic, brutal, 15th-century. Use specific historical consequences.
+    TONE: Brutal, immersive, and historically cynical. Power is zero-sum.
   `;
 
   const profile = currentState.tacticalProfile;
 
   const prompt = `
-    PLAYER TACTICAL PROFILE:
-    - Economic Bias: ${profile.economicActions}
-    - Aggression Bias: ${profile.aggressiveActions}
-    - Diplomatic Bias: ${profile.diplomaticActions}
-    - Subterfuge Bias: ${profile.subterfugeActions}
-    - Success Rate: ${profile.successRate}%
-    - World Adaptation Level: ${profile.adaptationLevel}
-
-    Context: Turn ${currentState.turn}, Loc: ${currentState.locationPath.join('/')}, Gold: ${currentState.treasury}
-    Stats: H:${currentState.health}, S:${currentState.safety}, Rep: P:${currentState.publicImage}/N:${currentState.nobleStanding}/C:${currentState.clergyTrust}
+    CURRENT DATE: Month ${currentState.month}, ${currentState.year} AD.
+    PLAYER STATUS: ${currentState.characterName} (${currentState.rankTitle}), Age ${currentState.age}.
+    STATS: Gold: ${currentState.treasury}, Health: ${currentState.health}, Safety: ${currentState.safety}.
     
-    Current Action: "${actionText}" (Scale: ${timeScale})
+    PLAYER TACTICAL PROFILE (for AI adaptation):
+    - Econ Bias: ${profile.economicActions}, Aggr Bias: ${profile.aggressiveActions}, Dipl Bias: ${profile.diplomaticActions}, Subt Bias: ${profile.subterfugeActions}.
     
-    Analyze the action and evolve the simulation. Respond strictly in JSON.
+    Current Action: "${actionText}" (Time Scale: ${timeScale}).
+    
+    Evolve the story. Respond strictly in JSON.
   `;
 
   try {
@@ -63,7 +60,7 @@ export async function processLifeAction(
           type: Type.OBJECT,
           properties: {
             narrative: { type: Type.STRING },
-            adaptationNote: { type: Type.STRING, description: 'Internal AI thought on how it is improving/adjusting the game' },
+            adaptationNote: { type: Type.STRING },
             whisper: { type: Type.STRING },
             rippleContext: { type: Type.STRING },
             stateUpdates: {
@@ -78,11 +75,10 @@ export async function processLifeAction(
                 cunningChange: { type: Type.NUMBER },
                 safetyChange: { type: Type.NUMBER },
                 healthChange: { type: Type.NUMBER },
-                adaptationIncrease: { type: Type.NUMBER, description: 'How much the world learned from this turn' },
+                adaptationIncrease: { type: Type.NUMBER },
                 newTraits: { type: Type.ARRAY, items: { type: Type.STRING } },
                 newRankTitle: { type: Type.STRING },
                 newLocationPath: { type: Type.ARRAY, items: { type: Type.STRING } },
-                updatedScenarios: { type: Type.ARRAY, items: { type: Type.STRING } },
                 newWorldEvent: {
                   type: Type.OBJECT,
                   properties: {
@@ -107,21 +103,27 @@ export async function processLifeAction(
 
     return JSON.parse(response.text.replace(/```json\s?|```/g, "").trim());
   } catch (e) {
-    console.error("AI Core Error:", e);
     return {
-      narrative: `The cycle of power continues, indifferent to your choices.`,
-      suggestions: ["Observe local rumors"],
+      narrative: `The tide of history turns at ${currentState.year} AD.`,
+      suggestions: ["Consult the chronicles"],
       stateUpdates: { treasuryChange: 0, incomeChange: 0, expenseChange: 0, publicChange: 0, nobleChange: 0, clergyChange: 0, cunningChange: 0, safetyChange: 0, healthChange: 0 }
     };
   }
 }
 
-export async function exploreLocation(locationName: string): Promise<ExplorationResponse> {
+export async function exploreLocation(locationName: string, year: number): Promise<ExplorationResponse> {
   const ai = getAI();
   const model = 'gemini-2.5-flash';
 
-  const prompt = `Research the EXACT historical hierarchy for "${locationName}" circa 1400-1450 AD using Google Maps grounding. 
-  Identify Sovereign, Peerage, and Ecclesiastical seat. Return strictly in JSON.`;
+  const prompt = `Identify the EXACT historical power structure for "${locationName}" during the year ${year} AD. 
+  
+  ADJUST TITLES FOR ERA:
+  - If year < 1800: Use Duke, Bishop, Count, Lord.
+  - If 1800 < year < 1900: Use Governor, Mayor, Prime Minister, Industrial Baron.
+  - If year > 1900: Use President, General, CEO, Secretary.
+  
+  Identify Sovereign (Secular), Ecclesiastical (or ideological) seat, and the hierarchy of influence. 
+  Return strictly in JSON. Use Google Maps grounding for accuracy.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -165,9 +167,9 @@ export async function exploreLocation(locationName: string): Promise<Exploration
     return { ...data, mapsUri };
   } catch (e) {
     return {
-      hierarchy: [{ rank: 'King', name: 'Charles VI', influence: 90 }],
-      churchInfo: { title: 'Pope', ruler: 'Benedict XIII' },
-      description: 'Records are obscured by time.'
+      hierarchy: [{ rank: 'Executive', name: 'Unknown Figure', influence: 50 }],
+      churchInfo: { title: 'Leader', ruler: 'Anonymous' },
+      description: 'The archives of this era are difficult to parse.'
     };
   }
 }
@@ -178,7 +180,7 @@ export async function getChatbotResponse(history: ChatMessage[]): Promise<string
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: history.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })),
-      config: { systemInstruction: "You are the Chronicle Sage. Provide short, atmospheric medieval answers." }
+      config: { systemInstruction: "You are the Chronicle Sage. Provide short, atmospheric historical answers relevant to the 15th-20th centuries." }
     });
     return response.text || "The archives are sealed.";
   } catch (e) {
