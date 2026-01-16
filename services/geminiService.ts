@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameState, AIResponse, TimeScale, ChatMessage, ExplorationResponse } from "../types";
 
