@@ -1,4 +1,4 @@
-import generateAIResponse from "./generate-ai-response";
+import generateAIResponse from "./airesponse";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
